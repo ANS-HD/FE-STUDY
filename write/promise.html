@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MyPromise</title>
+  </head>
+  <body>
+    <script>
+      const PENDING = "PENDING";
+      const FULFILLED = "FULFILLED";
+      const REJECTED = "REJECTED";
+
+      const resolvePromise = (promise2, x, resolve, reject) => {
+        // 自己等待自己完成是错误的实现，用一个类型错误，结束掉 promise  Promise/A+ 2.3.1
+        if (promise2 === x) {
+          return reject(
+            new TypeError("Chaining cycle detected for promise #<Promise>")
+          );
+        }
+        // Promise/A+ 2.3.3.3.3 只能调用一次
+        let called;
+        // 后续的条件要严格判断 保证代码能和别的库一起使用
+        if ((typeof x === "object" && x != null) || typeof x === "function") {
+          try {
+            // 为了判断 resolve 过的就不用再 reject 了（比如 reject 和 resolve 同时调用的时候）  Promise/A+ 2.3.3.1
+            let then = x.then;
+            if (typeof then === "function") {
+              // 不要写成 x.then，直接 then.call 就可以了 因为 x.then 会再次取值，Object.defineProperty  Promise/A+ 2.3.3.3
+              then.call(
+                x,
+                (y) => {
+                  // 根据 promise 的状态决定是成功还是失败
+                  if (called) return;
+                  called = true;
+                  // 递归解析的过程（因为可能 promise 中还有 promise） Promise/A+ 2.3.3.3.1
+                  resolvePromise(promise2, y, resolve, reject);
+                },
+                (r) => {
+                  // 只要失败就失败 Promise/A+ 2.3.3.3.2
+                  if (called) return;
+                  called = true;
+                  reject(r);
+                }
+              );
+            } else {
+              // 如果 x.then 是个普通值就直接返回 resolve 作为结果  Promise/A+ 2.3.3.4
+              resolve(x);
+            }
+          } catch (e) {
+            // Promise/A+ 2.3.3.2
+            if (called) return;
+            called = true;
+            reject(e);
+          }
+        } else {
+          // 如果 x 是个普通值就直接返回 resolve 作为结果  Promise/A+ 2.3.4
+          resolve(x);
+        }
+      };
+      class MyPromise {
+        constructor(executor) {
+          this.status = PENDING;
+          this.value = undefined;
+          this.reason = undefined;
+          this.onResolveCallbacks = [];
+          this.onRejectCallbacks = [];
+
+          let resolve = (value) => {
+            if (this.status === PENDING) {
+              this.status = FULFILLED;
+              this.value = value;
+              this.onResolveCallbacks.forEach((fn) => fn());
+            }
+            // if()
+          };
+          let reject = (reason) => {
+            if (this.status === PENDING) {
+              this.status = REJECTED;
+              this.reason = reason;
+              this.onRejectCallbacks.forEach((fn) => fn());
+            }
+          };
+          try {
+            executor(resolve, reject);
+          } catch (error) {
+            reject(error);
+          }
+        }
+
+        then = (onFul, onRej) => {
+          onFul = typeof onFul === "function" ? onFul : (v) => v;
+          onRej =
+            typeof onRej === "function"
+              ? onRej
+              : (err) => {
+                  throw err;
+                };
+
+          let promise2 = new MyPromise((resolve, reject) => {
+            if (this.status === FULFILLED) {
+              setTimeout(() => {
+                try {
+                  let x = onFul(this.value);
+                  resolvePromise(promise2, x, resolve, reject);
+                } catch (error) {
+                  reject(error);
+                }
+              }, 0);
+              //   onFul(this.value);
+            }
+            if (this.status === REJECTED) {
+              setTimeout(() => {
+                try {
+                  let x = onRej(this.reason);
+                  resolvePromise(promise2, x, resolve, reject);
+                } catch (error) {
+                  reject(error);
+                }
+              }, 0);
+              //   onRej(this.reason);
+            }
+            if (this.status === PENDING) {
+              this.onResolveCallbacks.push(() => {
+                setTimeout(() => {
+                  try {
+                    let x = onFul(this.value);
+                    resolvePromise(promise2, x, resolve, reject);
+                  } catch (error) {
+                    reject(error);
+                  }
+                }, 0);
+              });
+              this.onRejectCallbacks.push(() => {
+                setTimeout(() => {
+                  try {
+                    let x = onRej(this.value);
+                    resolvePromise(promise2, x, resolve, reject);
+                  } catch (error) {
+                    reject(error);
+                  }
+                }, 0);
+              });
+            }
+          });
+          return promise2;
+        };
+
+        static resolve = (val) => {
+          if (val instanceof MyPromise) {
+            return val;
+          }
+          // 否则，将普通值包装成一个新的 Promise
+          return new MyPromise((resolve) => resolve(val));
+        };
+
+        static reject(reason) {
+          return new MyPromise((resolve, reject) => {
+            reject(reason);
+          });
+        }
+      }
+
+      MyPromise.prototype.catch = function (fn) {
+        return this.then(null, fn);
+      };
+
+      MyPromise.prototype.finally = function (fn) {
+        return this.then(
+          (value) => {
+            fn();
+            return value;
+          },
+          (error) => {
+            fn();
+            throw error;
+          }
+        );
+      };
+
+      MyPromise.all = (callbacks) => {
+        if (!Array.isArray(callbacks)) {
+          throw new TypeError("传入参数错误");
+        }
+        return new MyPromise((res, rej) => {
+          let result = [];
+          let count = 0;
+          callbacks.forEach((item, index) => {
+            MyPromise.resolve(item).then(
+              (v) => {
+                result[index] = v;
+                count++;
+
+                if (count === callbacks.length) {
+                  res(result);
+                }
+              },
+              (err) => rej(err)
+            );
+          });
+        });
+      };
+
+      MyPromise.race = (callbacks) => {
+        if (!Array.isArray(callbacks)) {
+          throw new TypeError("传入参数错误");
+        }
+        return new MyPromise((resolve, reject) => {
+          callbacks.forEach((item) => {
+            MyPromise.resolve(item)
+              .then((v) => resolve(v))
+              .catch((err) => reject(err));
+          });
+        });
+      };
+      MyPromise.allSettled = (callbacks) => {
+        if (!Array.isArray(callbacks)) {
+          throw new TypeError("传入参数错误");
+        }
+        let result = [];
+        let count = 0;
+        return new MyPromise((resolve, reject) => {
+          callbacks.forEach((item, index) => {
+            MyPromise.resolve(item).then(
+              (v) => {
+                count++;
+                result[index] = { value: v, status: "fulfilled" };
+                if (count === callbacks.length) {
+                  resolve(result);
+                }
+              },
+              (reason) => {
+                console.log(reason, item);
+
+                count++;
+                result[index] = { reason, status: "rejected" };
+                if (count === callbacks.length) {
+                  resolve(result);
+                }
+              }
+            );
+          });
+        });
+      };
+
+      //   let pro = new MyPromise((res, rej) => {
+      //     console.log(1111);
+      //     res(111);
+      //   });
+      //   pro.then((res) => {
+      //     return new MyPromise((res, rej) => {
+      //       console.log(2222);
+      //       setTimeout(() => {
+      //         res(222);
+      //       }, 2000);
+      //     }).then((res) => {
+      //       console.log(res);
+      //     });
+      //   });
+
+      let allP = new MyPromise((res, rej) => {
+        setTimeout(() => {
+          res(111);
+        }, 1000);
+      });
+
+      let allP2 = new MyPromise((res, rej) => {
+        res(2222);
+      });
+
+      let allP3 = new MyPromise((res, rej) => {
+        rej(333);
+      });
+
+      let allP4 = new MyPromise((res, rej) => {
+        res(444);
+      });
+
+      let ds = MyPromise.allSettled([allP, 10000, allP2, allP3, allP4])
+        .then(
+          (res) => console.log(res),
+          (err) => console.log(err)
+        )
+        .catch((e) => console.log(e));
+      //  .then((res) => {
+      //     console.log(res);
+      //   });
+
+      console.log(ds);
+    </script>
+  </body>
+</html>
