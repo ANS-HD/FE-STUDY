@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>发布订阅模式</title>
+  </head>
+  <body></body>
+  <script>
+    // class Message {
+    //   constructor() {
+    //     this.subscriptions = {};
+    //   }
+
+    //   subscribe(topic, callback) {
+    //     if (!this.subscriptions[topic]) {
+    //       this.subscriptions[topic] = [];
+    //     }
+    //     this.subscriptions[topic].push(callback);
+    //   }
+
+    //   publish(topic, data) {
+    //     if (!this.subscriptions[topic]) {
+    //       return;
+    //     }
+    //     this.subscriptions[topic].forEach((callback) => {
+    //       callback(data);
+    //     });
+    //   }
+    // }
+
+    // class publisher {
+    //   constructor(broker) {
+    //     this.broker = broker;
+    //   }
+    //   publishMessage(topic, message) {
+    //     this.broker.publish(topic, message);
+    //   }
+    // }
+
+    // // 订阅者
+    // class Subscriber {
+    //   constructor(broker, name) {
+    //     this.broker = broker;
+    //     this.name = name;
+    //   }
+
+    //   subscribeToTopic(topic) {
+    //     this.broker.subscribe(topic, (data) => {
+    //       console.log(`Subscriber ${this.name} received message: ${data}`);
+    //     });
+    //   }
+    // }
+
+    // class EventEmitter {
+    //   constructor() {
+    //     this.listener = {};
+    //   }
+
+    //   on(eventName, fn) {
+    //     if (!this.listener[eventName]) {
+    //       this.listener[eventName] = [];
+    //     }
+    //     this.listener[eventName].push(fn);
+    //   }
+
+    //   off(eventName, fn) {
+    //     let callbacks = this.listener[eventName];
+    //     if (!callbacks) {
+    //       return false;
+    //     }
+
+    //     if (!fn) {
+    //       callbacks.length = 0;
+    //     } else {
+    //       let cb;
+    //       // 遍历所对应的fn，判断和那个fn相同，相同则删除
+    //       for (let i = 0, cbLen = callbacks.length; i < cbLen; i++) {
+    //         cb = callbacks[i];
+    //         if (cb == fn || cb.fn == fn) {
+    //           callbacks.splice(i, 1);
+    //           break;
+    //         }
+    //       }
+    //     }
+    //   }
+    //   emit(eventName, data) {
+    //     const callbacks = this.listener[eventName];
+    //     if (callbacks) {
+    //       callbacks.forEach((c) => {
+    //         c(data);
+    //       });
+    //     }
+    //   }
+    // }
+
+    class EventHub {
+      constructor() {
+        this.eventsCenter = {};
+      }
+      on(key, callBack) {
+        // 添加订阅
+        if (this.eventsCenter.hasOwnProperty(key)) {
+          this.eventsCenter[key].push(callBack);
+        } else {
+          this.eventsCenter[key] = [callBack];
+        }
+      }
+      off(key, callBack) {
+        // 删除当前订阅下的 此回调函数并且在此订阅无任何回调后，删除此订阅；
+        if (this.eventsCenter.hasOwnProperty(key)) {
+          const curCallbackList = this.eventsCenter[key];
+          this.eventsCenter[key] = curCallbackList.filter(
+            (eachCallback) => eachCallback !== callBack
+          );
+          if (!curCallbackList.length) delete this.eventsCenter[key];
+        }
+      }
+      emit(key, ...arg) {
+        // 派发事件，并通过apply将this，arguments传入到回调函数中
+        const list = this.eventsCenter[key];
+        if (list?.length) {
+          list.forEach((eachFun) => eachFun.apply(this, [...arg]));
+        }
+      }
+      once(key, callBack) {
+        // 订阅一次事件，这里注意 on 和 off要同一个引用，后续才可以将此次订阅off掉
+        function fun() {
+          callBack();
+          this.off(key, fun);
+        }
+        this.on(key, fun);
+      }
+    }
+
+    const demo = new EventHub();
+
+    // function test2() {
+    //   console.log("a--> case2");
+    // }
+
+    // demo.on("a", () => {
+    //   console.log("a--> case1");
+    // });
+    // demo.on("a", test2);
+    // // 此时a订阅下，执行case1, case2回调
+    // demo.emit("a");
+    // demo.off("a", test2);
+    // // 此时a订阅下，只执行case1, case2已被解除
+    // demo.emit("a");
+
+    // demo.once("a", () => {
+    //   console.log("a--> once");
+    // });
+    // // 此时a订阅下，执行case1, once 两次回调
+    // demo.emit("a");
+
+    // setTimeout(() => {
+    //   // 此时a订阅下，只执行case1, once 只执行一次
+    //   demo.emit("a");
+    // }, 1000);
+  </script>
+</html>

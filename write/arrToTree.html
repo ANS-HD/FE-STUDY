@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>js数组转树</title>
+  </head>
+  <body>
+    <script>
+      const data = [
+        { id: 1, parentId: null, name: "Root" },
+        { id: 2, parentId: 1, name: "Child 1" },
+        { id: 3, parentId: 1, name: "Child 2" },
+        { id: 4, parentId: 2, name: "Grandchild 1" },
+        { id: 5, parentId: 2, name: "Grandchild 2" },
+        { id: 6, parentId: 3, name: "Grandchild 3" },
+      ];
+
+      function arrToTree(arr) {
+        const res = [];
+        const map = new Map();
+        arr.forEach((item) => {
+          map.set(item.id, { ...item, children: [] });
+        });
+        arr.forEach((item) => {
+          if (!item.parentId) {
+            res.push(map.get(item.id));
+          } else {
+            const par = map.get(item.parentId);
+            if (par) {
+              par.children.push(map.get(item.id));
+            }
+          }
+        });
+
+        console.log(res);
+      }
+
+      arrToTree(data);
+    </script>
+  </body>
+</html>

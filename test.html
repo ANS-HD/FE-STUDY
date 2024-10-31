@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <script>
+      // console.log(1);
+      // setTimeout(() => {
+      //     console.log(2);
+      //     new Promise((res) => {
+      //         res(11111)
+      //         console.log(3);
+      //     }).then((v) => {
+      //         console.log(4);
+      //     })
+
+      // }, 0);
+      // setTimeout(() => {
+      //     console.log(5);
+
+      // }, 0);
+      // console.log(6);
+
+      function fun(arr) {
+        let res = [];
+        let map = new Map();
+
+        arr.forEach((item) => {
+          if (!map.get(item) || map.get(item) < 2) {
+            mat.set(item, (map.get(item) || 0) + 1);
+          }
+        });
+
+        arr.forEach((item) => {
+          if (map.get(item) > 0) {
+            res.push(item);
+            map.set(item, map.get(item) - 1);
+          }
+        });
+      }
+
+      fun()
+    </script>
+  </body>
+</html>

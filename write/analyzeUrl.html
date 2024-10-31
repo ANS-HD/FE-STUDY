@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <script>
+      // https://zhaopin.sankuai.com/video-interview/interviewer?roomid=223039337&interviewid=2737759077&isRetry=1&a.0=1&a.1=2&d.b.c=3
+
+      // {
+
+      //  roomid: 223039337,
+
+      //  a:  [1, 2],
+
+      //  d: {b: {c: 3}}
+
+      // }
+
+      // function analyzerUrl(url) {
+      //     let params = url.split('?')[1].split('&')
+      //     const res = {}
+      //     params.forEach(item => {
+      //         const label = item.split('=')[0]
+      //         const value = decodeURIComponent(item.split('=')[1])
+      //         console.log(label, value, typeof value);
+      //         let cur = null
+      //         if (label.indexOf('0') > -1) {
+      //             cur = []
+      //         } else {
+      //             cur = {}
+      //         }
+      //         if (label.indexOf('.') > -1) {
+      //             let curr = null
+      //             label.split('.').forEach((ele,index)=> {
+      //                 if( label.split('.').length -1 === index){
+      //                     cur.ele
+      //                 }
+
+      //             })
+      //         } else {
+      //             res.label = value
+      //         }
+
+      //     });
+
+      // }
+
+      // 定义函数，将 URL 查询字符串转换为对象
+      function parseQuery(url) {
+        const queryString = url.split("?")[1];
+        const params = new URLSearchParams(queryString);
+        const result = {};
+        console.log();
+
+        params.forEach((value, key) => {
+          console.log(value, key);
+
+          const keys = key.split(".");
+          let temp = result;
+
+          keys.forEach((k, index) => {
+            // 将 value 转为数字
+            value = !isNaN(value) ? Number(value) : value;
+
+            // 检查是否为最后一个键
+            if (index === keys.length - 1) {
+              // 处理数组或对象
+              if (!isNaN(k)) {
+                // 确保父级是数组
+                const parentKey = keys[index - 1];
+                if (!Array.isArray(temp[parentKey])) {
+                  temp[parentKey] = [];
+                }
+                temp[parentKey][Number(k)] = value;
+              } else {
+                if (temp[k]) {
+                //   if (Array.isArray(temp[k])) {
+                //     temp[k].push(value);
+                //   } else {
+                    temp[k] = [temp[k], value];
+                //   }
+                } else {
+                  temp[k] = value;
+                }
+              }
+            } else {
+              // 如果下一层是数字，创建数组，否则创建对象
+              if (!temp[k]) {
+                temp[k] = !isNaN(keys[index + 1]) ? [] : {};
+              }
+              if (!Array.isArray(temp[k])) {
+                temp = temp[k];
+              }
+            }
+          });
+        });
+
+        return result;
+      }
+
+      // 测试 URL
+      const url =
+        "https://zhaopin.sankuai.com/video-interview/interviewer?roomid=223039337&interviewid=2737759077&isRetry=1&a.0=1&a.1=2&d.b.c.d.e.f.q.z=3";
+      console.log(parseQuery(url));
+    //   parseQuery(url);
+
+      // analyzerUrl('https://zhaopin.sankuai.com/video-interview/interviewer?roomid=223039337&interviewid=2737759077&isRetry=1&a.0=1&a.1=2&d.b.c=3')
+    </script>
+  </body>
+</html>
